@@ -4,8 +4,6 @@
   "parameters": {
     "environment": { "value": "prod" },
     "location": { "value": "eastus" },
-    "openAiGpt4oDeployment": { "value": "gpt-4o" },
-    "openAiAdaDeployment": { "value": "text-embedding-ada-002" },
     "allowedOrigin": { "value": "https://kinetic-core.azurewebsites.net" }
   }
 }

@@ -17,17 +17,8 @@ param location string = resourceGroup().location
 @description('Unique suffix to avoid naming conflicts')
 param suffix string = uniqueString(resourceGroup().id)
 
-@description('Azure OpenAI GPT-4o deployment name')
-param openAiGpt4oDeployment string = 'gpt-4o'
-
-@description('Azure OpenAI Ada-002 deployment name')
-param openAiAdaDeployment string = 'text-embedding-ada-002'
-
 @description('Allowed CORS origin for the API')
 param allowedOrigin string = 'http://localhost:3000'
-
-@description('Deploy Azure OpenAI resource (requires quota — set false to use OPENAI_API_KEY fallback)')
-param deployAzureOpenAi bool = false
 
 var prefix = 'kcore'
 var tags = {
@@ -80,20 +71,6 @@ module cosmosDb '../modules/cosmos_db.bicep' = {
   }
 }
 
-// ── Azure OpenAI (conditional — skipped when quota unavailable) ───────────────
-module openAi '../modules/openai.bicep' = if (deployAzureOpenAi) {
-  name: 'openAiDeploy'
-  params: {
-    name: '${prefix}-aoai-${suffix}'
-    location: location
-    tags: tags
-    gpt4oDeploymentName: openAiGpt4oDeployment
-    adaDeploymentName: openAiAdaDeployment
-  }
-}
-
-var openAiEndpoint = deployAzureOpenAi ? openAi.outputs.endpoint : ''
-
 // ── Azure AI Search ───────────────────────────────────────────────────────────
 module aiSearch '../modules/ai_search.bicep' = {
   name: 'aiSearchDeploy'
@@ -106,6 +83,9 @@ module aiSearch '../modules/ai_search.bicep' = {
 }
 
 // ── Azure Functions ───────────────────────────────────────────────────────────
+// Azure OpenAI endpoint is intentionally blank — agents/client.py falls back
+// to OPENAI_API_KEY automatically when AZURE_OPENAI_ENDPOINT is empty.
+// Wire this up once Azure OpenAI quota is approved for the subscription.
 module functionApp '../modules/function_app.bicep' = {
   name: 'functionAppDeploy'
   params: {
@@ -113,12 +93,11 @@ module functionApp '../modules/function_app.bicep' = {
     location: location
     tags: tags
     cosmosEndpoint: cosmosDb.outputs.endpoint
-    openAiEndpoint: openAiEndpoint
+    openAiEndpoint: ''
     searchEndpoint: aiSearch.outputs.endpoint
     allowedOrigin: allowedOrigin
     keyVaultName: keyVault.outputs.name
   }
-  dependsOn: [cosmosDb, aiSearch, keyVault]
 }
 
 // ── Azure Static Web Apps ─────────────────────────────────────────────────────
@@ -156,7 +135,6 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 // ── Outputs ───────────────────────────────────────────────────────────────────
 output iotHubConnectionString string = iotHub.outputs.connectionString
 output cosmosEndpoint string = cosmosDb.outputs.endpoint
-output openAiEndpoint string = openAiEndpoint
 output searchEndpoint string = aiSearch.outputs.endpoint
 output functionAppUrl string = functionApp.outputs.url
 output instrumentationKey string = appInsights.properties.InstrumentationKey
