@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "IOTHUB_EVENT_HUB_CONNECTION_STRING": "<from Key Vault: iothub-eh-connection-string>",
+    "COSMOS_ENDPOINT": "<from Key Vault: cosmos-endpoint>",
+    "COSMOS_KEY": "<from Key Vault: cosmos-key>",
+    "COSMOS_DB": "kinetic-core",
+    "OPENAI_API_KEY": "<from Key Vault: openai-api-key>",
+    "KINETIC_CORE_API_URL": "http://localhost:8000"
+  }
+}

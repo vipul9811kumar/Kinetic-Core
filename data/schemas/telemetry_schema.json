@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "KineticCore Telemetry Event",
+  "description": "IoT telemetry payload from a Kinetic-Core Model X cooling unit",
+  "type": "object",
+  "required": [
+    "device_id",
+    "facility_id",
+    "rack_id",
+    "timestamp",
+    "readings",
+    "metadata"
+  ],
+  "properties": {
+    "device_id": {
+      "type": "string",
+      "pattern": "^KCX-[A-Z]{3}-[0-9]{4}$",
+      "example": "KCX-NYC-0042"
+    },
+    "facility_id": {
+      "type": "string",
+      "example": "FAC-NYC-DATACENTER-01"
+    },
+    "rack_id": {
+      "type": "string",
+      "example": "RACK-B7-U12"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "example": "2025-01-15T14:32:07.123Z"
+    },
+    "readings": {
+      "type": "object",
+      "required": [
+        "temperature_celsius",
+        "voltage_v",
+        "current_a",
+        "vibration_mm_s",
+        "coolant_flow_lpm",
+        "ambient_temp_celsius",
+        "power_factor",
+        "rpm"
+      ],
+      "properties": {
+        "temperature_celsius": {
+          "type": "number",
+          "minimum": -10,
+          "maximum": 120,
+          "description": "Primary thermal sensor reading at cooling unit heat exchanger"
+        },
+        "voltage_v": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600,
+          "description": "Supply voltage to the cooling unit"
+        },
+        "current_a": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Current draw of the coolant pump motor"
+        },
+        "vibration_mm_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50,
+          "description": "RMS vibration velocity at pump bearing housing"
+        },
+        "coolant_flow_lpm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 500,
+          "description": "Volumetric coolant flow rate through heat exchanger"
+        },
+        "ambient_temp_celsius": {
+          "type": "number",
+          "minimum": -10,
+          "maximum": 60,
+          "description": "Data center ambient temperature at rack inlet"
+        },
+        "power_factor": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Motor power factor (0.0–1.0)"
+        },
+        "rpm": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4000,
+          "description": "Coolant pump motor RPM"
+        }
+      }
+    },
+    "fault_flags": {
+      "type": "object",
+      "properties": {
+        "thermal_warning": { "type": "boolean" },
+        "flow_deviation": { "type": "boolean" },
+        "vibration_alert": { "type": "boolean" },
+        "voltage_anomaly": { "type": "boolean" }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["firmware_version", "model", "install_date"],
+      "properties": {
+        "firmware_version": { "type": "string", "example": "3.2.1" },
+        "model": { "type": "string", "example": "Kinetic-Core Model X" },
+        "install_date": { "type": "string", "format": "date" },
+        "last_service_date": { "type": "string", "format": "date" }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": { "value": "prod" },
+    "location": { "value": "eastus" },
+    "openAiGpt4oDeployment": { "value": "gpt-4o" },
+    "openAiAdaDeployment": { "value": "text-embedding-ada-002" },
+    "allowedOrigin": { "value": "https://kinetic-core.azurewebsites.net" }
+  }
+}

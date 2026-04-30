@@ -1,0 +1,157 @@
+name: Deploy — Staging & Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options: [staging, prod]
+  schedule:
+    - cron: "0 6 * * MON"  # Weekly drift check — every Monday 06:00 UTC
+
+jobs:
+  # ── Deploy Infrastructure ─────────────────────────────────────────────────
+  deploy-infra:
+    name: Deploy Bicep Infrastructure
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    outputs:
+      function_url: ${{ steps.bicep.outputs.functionAppUrl }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep
+        id: bicep
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: ${{ secrets.AZURE_RG }}
+          template: infra/bicep/main/main.bicep
+          parameters: >
+            environment=${{ github.event.inputs.environment || 'staging' }}
+            allowedOrigin=${{ secrets.ALLOWED_ORIGIN }}
+
+  # ── Build and Push Knowledge Index ────────────────────────────────────────
+  index-knowledge:
+    name: Rebuild AI Search Index
+    runs-on: ubuntu-latest
+    needs: deploy-infra
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -e "."
+
+      - name: Chunk manuals
+        run: python knowledge/chunker/semantic_chunker.py
+
+      - name: Embed chunks
+        run: python knowledge/embedder/embedder.py
+        env:
+          AZURE_OPENAI_KEY: ${{ secrets.AZURE_OPENAI_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+
+      - name: Index to AI Search
+        run: python knowledge/indexer/indexer.py --create-index
+        env:
+          AZURE_SEARCH_ENDPOINT: ${{ secrets.AZURE_SEARCH_ENDPOINT }}
+          AZURE_SEARCH_KEY: ${{ secrets.AZURE_SEARCH_KEY }}
+
+  # ── Deploy Python Backend to Azure Functions ──────────────────────────────
+  deploy-backend:
+    name: Deploy Azure Functions
+    runs-on: ubuntu-latest
+    needs: [deploy-infra, index-knowledge]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Functions
+        uses: azure/functions-action@v1
+        with:
+          app-name: ${{ secrets.FUNCTION_APP_NAME }}
+          package: .
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
+
+  # ── Deploy Frontend to Azure Static Web Apps ───────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: deploy-infra
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install & Build
+        run: |
+          npm ci
+          npm run build
+        env:
+          VITE_API_URL: ${{ needs.deploy-infra.outputs.function_url }}
+
+      - name: Deploy to Static Web Apps
+        uses: azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.SWA_DEPLOYMENT_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: frontend
+          output_location: dist
+
+  # ── Weekly Drift Check ────────────────────────────────────────────────────
+  drift-check:
+    name: Weekly Drift Detection
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - run: pip install -e "."
+      - run: python monitoring/drift/detector.py --evaluate
+        env:
+          COSMOS_ENDPOINT: ${{ secrets.COSMOS_ENDPOINT }}
+          COSMOS_KEY: ${{ secrets.COSMOS_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_KEY: ${{ secrets.AZURE_OPENAI_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          BASELINE_F1_SCORE: "0.91"
+          DRIFT_THRESHOLD: "0.05"

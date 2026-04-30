@@ -1,0 +1,60 @@
+# Environment
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.pyright/
+coverage.xml
+.coverage
+htmlcov/
+
+# Notebooks
+.ipynb_checkpoints/
+notebooks/*.html
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Azure Functions
+.python_packages/
+local.settings.json
+bin/
+obj/
+
+# Generated data outputs (generated files, not source generators)
+data/synthetic/telemetry/output/
+data/synthetic/logs/output/
+knowledge/chunker/output/
+knowledge/embedder/output/
+monitoring/drift/reports/
+monitoring/evaluation/reports/
+
+# IDE
+.vscode/settings.json
+.vscode/*.code-workspace
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Secrets
+*.pem
+*.key
+service-account.json
+credentials.json

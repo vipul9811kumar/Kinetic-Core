@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "KineticCore Maintenance Log Entry",
+  "description": "Historical maintenance record stored in SQL database",
+  "type": "object",
+  "required": [
+    "log_id",
+    "device_id",
+    "incident_id",
+    "fault_code",
+    "reported_at",
+    "resolved_at",
+    "technician_id",
+    "repair_actions",
+    "parts_replaced",
+    "outcome"
+  ],
+  "properties": {
+    "log_id": { "type": "string", "pattern": "^LOG-[0-9]{8}-[0-9]{4}$" },
+    "device_id": { "type": "string" },
+    "incident_id": { "type": "string", "pattern": "^INC-[0-9]{4}-[0-9]{4}$" },
+    "fault_code": {
+      "type": "string",
+      "enum": [
+        "KX-T2209-B",
+        "KX-V1103-A",
+        "KX-P3301-C",
+        "KX-E4412-A",
+        "KX-F2208-B",
+        "KX-C5501-A"
+      ],
+      "description": "Fault code from the Kinetic-Core Model X fault taxonomy"
+    },
+    "fault_description": { "type": "string" },
+    "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+    "reported_at": { "type": "string", "format": "date-time" },
+    "resolved_at": { "type": "string", "format": "date-time" },
+    "resolution_minutes": { "type": "integer", "minimum": 0 },
+    "technician_id": { "type": "string" },
+    "technician_name": { "type": "string" },
+    "repair_actions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ordered list of repair steps executed"
+    },
+    "parts_replaced": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "part_number": { "type": "string" },
+          "part_name": { "type": "string" },
+          "quantity": { "type": "integer" }
+        }
+      }
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["RESOLVED", "ESCALATED", "DEFERRED", "REPLACED_UNIT"]
+    },
+    "root_cause_confirmed": { "type": "string" },
+    "ai_diagnosis_match": {
+      "type": "boolean",
+      "description": "Whether the AI diagnostic matched the confirmed root cause"
+    },
+    "notes": { "type": "string" }
+  }
+}
