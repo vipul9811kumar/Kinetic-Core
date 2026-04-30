@@ -144,7 +144,7 @@ export default function AgentTrace() {
             <span>Duration: <span className="text-gray-300">{stages.librarian.estimated_duration_minutes} min</span></span>
           </div>
           <div className="space-y-2">
-            {stages.librarian.repair_steps.map((step: any) => (
+            {stages.librarian.repair_steps.map((step: { step: number; action: string; safety_critical: boolean }) => (
               <div key={step.step} className={`flex gap-3 p-2 rounded text-sm ${
                 step.safety_critical ? 'bg-amber-900/20 border border-amber-800/50' : 'bg-gray-800/50'
               }`}>
@@ -157,7 +157,7 @@ export default function AgentTrace() {
             ))}
           </div>
           <div className="flex gap-2 mt-2">
-            {stages.librarian.parts_list.map((p: any) => (
+            {stages.librarian.parts_list.map((p: { part_number: string; quantity: number }) => (
               <span key={p.part_number} className="text-xs bg-blue-900/30 text-blue-300 border border-blue-800/50 px-2 py-1 rounded font-mono">
                 {p.part_number} × {p.quantity}
               </span>

@@ -22,6 +22,7 @@ jobs:
     environment: ${{ github.event.inputs.environment || 'staging' }}
     outputs:
       function_url: ${{ steps.bicep.outputs.functionAppUrl }}
+      swa_hostname: ${{ steps.bicep.outputs.swaHostname }}
     steps:
       - uses: actions/checkout@v4
 
@@ -132,6 +133,7 @@ jobs:
           action: upload
           app_location: frontend
           output_location: dist
+          skip_app_build: true
 
   # ── Weekly Drift Check ────────────────────────────────────────────────────
   drift-check:

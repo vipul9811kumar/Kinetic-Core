@@ -1,8 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, CheckCircle, Clock, TrendingUp, Zap, Shield } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
-import { api } from '../utils/api'
-import { formatDistanceToNow } from 'date-fns'
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 
 const DEMO_TELEMETRY = Array.from({ length: 48 }, (_, i) => {
   const hour = i * 0.5
@@ -33,12 +30,6 @@ function StatCard({ title, value, subtitle, icon: Icon, color }: {
 }
 
 export default function Dashboard() {
-  const { data: incidents } = useQuery({
-    queryKey: ['incidents'],
-    queryFn: () => api.get('/incidents?limit=5').then(r => r.data),
-    retry: false,
-  })
-
   return (
     <div className="p-6 space-y-6">
       <div>

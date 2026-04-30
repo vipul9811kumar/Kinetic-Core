@@ -116,6 +116,16 @@ module functionApp '../modules/function_app.bicep' = {
   dependsOn: [cosmosDb, openAi, aiSearch, keyVault]
 }
 
+// ── Azure Static Web Apps ─────────────────────────────────────────────────────
+module staticWebApp '../modules/static_web_app.bicep' = {
+  name: 'staticWebAppDeploy'
+  params: {
+    name: '${prefix}-swa-${suffix}'
+    tags: tags
+    skuName: environment == 'prod' ? 'Standard' : 'Free'
+  }
+}
+
 // ── Azure Monitor + Log Analytics ─────────────────────────────────────────────
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: '${prefix}-law-${suffix}'
@@ -145,3 +155,4 @@ output openAiEndpoint string = openAi.outputs.endpoint
 output searchEndpoint string = aiSearch.outputs.endpoint
 output functionAppUrl string = functionApp.outputs.url
 output instrumentationKey string = appInsights.properties.InstrumentationKey
+output swaHostname string = staticWebApp.outputs.hostname
