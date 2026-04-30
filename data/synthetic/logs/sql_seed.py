@@ -1,15 +1,13 @@
 """
-Seed script for the maintenance log SQL database.
+Seed script for the maintenance log database.
 
-Creates 200 realistic historical maintenance records across all fault types.
-Includes correct resolutions (for training) and one deliberate mis-diagnosis
-(LOG-20240315-0047: vibration mis-classified as electrical) to show the AI
-catching a pattern the human missed.
+Creates 500 realistic historical maintenance records across all 12 devices and
+all 6 fault types. Includes three deliberate mis-diagnoses at indices 47, 183,
+and 361 to demonstrate the AI's self-correction over prompt versions.
 
 Usage:
+    python sql_seed.py --count 500 --export-csv data/synthetic/logs/output
     python sql_seed.py --db sqlite:///data/synthetic/logs/maintenance.db
-    python sql_seed.py --db postgresql://user:pass@host/kinetic_core
-    python sql_seed.py --export-csv data/synthetic/logs/
 """
 
 import argparse
@@ -23,7 +21,6 @@ from pathlib import Path
 try:
     from sqlalchemy import Column, DateTime, Float, Integer, String, Boolean, Text, create_engine
     from sqlalchemy.orm import DeclarativeBase, Session
-
     HAS_SQLALCHEMY = True
 except ImportError:
     HAS_SQLALCHEMY = False
@@ -35,14 +32,15 @@ FAULT_CATALOG = [
         "severity": "HIGH",
         "avg_resolution_min": 42,
         "repair_actions": [
-            "Isolate unit from power supply (verify lockout/tagout)",
+            "Isolate unit from power supply (verify LOTO)",
+            "Allow 15-minute coolant cool-down (below 50°C)",
             "Drain coolant loop to service reservoir",
-            "Remove pump assembly cover (4x M8 bolts)",
-            "Inspect seal housing for wear patterns (ref: Manual §7.3)",
+            "Remove pump assembly cover (4x M8 bolts, torque 24 Nm cross-pattern)",
+            "Inspect seal housing for wear patterns (Manual §5.1)",
             "Replace shaft seal P-2209 and O-ring set P-3301",
             "Refill coolant with Kinetic-Core Type-III fluid",
-            "Pressure test at 120 PSI for 10 minutes",
-            "Restore power and verify flow rate ≥ 180 LPM within 5 minutes",
+            "Pressure test at 120 PSI for 10 minutes (accept < 2 PSI loss)",
+            "Restore power and verify flow ≥ 175 LPM within 3 minutes",
         ],
         "parts": [
             {"part_number": "P-2209", "part_name": "Coolant Pump Shaft Seal", "quantity": 1},
@@ -57,11 +55,11 @@ FAULT_CATALOG = [
         "repair_actions": [
             "Schedule maintenance window (unit can operate at reduced capacity for 48h)",
             "Verify voltage < 480V before bearing access",
-            "Remove motor end-cap (8x M6 bolts, torque 12 Nm)",
+            "Remove motor end-cap (8x M6 bolts — note 2 bolts at 3 & 9 o'clock are 65mm, not 45mm)",
             "Extract bearing using P-1103-PULLER tool",
-            "Install replacement bearing P-1103-SKF (pre-lubricated)",
-            "Re-torque end-cap to spec",
-            "Verify vibration < 2.0 mm/s post-repair",
+            "Install pre-lubricated replacement bearing P-1103-SKF",
+            "Re-torque end-cap M6 bolts to 12 Nm",
+            "Verify vibration ≤ 1.5 mm/s and RPM 1750 ±25 post-repair",
         ],
         "parts": [
             {"part_number": "P-1103-SKF", "part_name": "Deep Groove Ball Bearing 6204-2RS", "quantity": 2},
@@ -69,42 +67,44 @@ FAULT_CATALOG = [
     },
     {
         "code": "KX-P3301-C",
-        "name": "Coolant Pressure Drop — Blockage",
+        "name": "Coolant Pressure Drop — Strainer Blockage",
         "severity": "MEDIUM",
         "avg_resolution_min": 28,
         "repair_actions": [
-            "Flush primary coolant circuit at 150% normal flow rate",
-            "Inspect and clean strainer screen P-STR-001",
-            "Check expansion tank level and refill if below MIN line",
+            "Run high-velocity flush at 120% pump speed for 5 minutes",
+            "Inspect and clean strainer screen P-STR-001 (M32 fitting access)",
+            "Replace strainer if > 30% blocked",
+            "Check expansion tank level and refill to MID mark",
             "Verify all valve positions per Manual §5.1 schematic",
-            "Monitor flow rate for 30 minutes post-flush",
+            "Monitor flow rate for 30 minutes post-flush (target ≥ 175 LPM)",
         ],
         "parts": [
-            {"part_number": "P-STR-001", "part_name": "Coolant Strainer Screen", "quantity": 1},
+            {"part_number": "P-STR-001", "part_name": "Coolant Strainer Screen (50-micron)", "quantity": 1},
         ],
     },
     {
         "code": "KX-E4412-A",
         "name": "Supply Voltage Sag — Motor Underperformance",
         "severity": "HIGH",
-        "avg_resolution_min": 15,
+        "avg_resolution_min": 18,
         "repair_actions": [
-            "Contact facility electrical team — do NOT perform repairs on power supply",
-            "Notify PDU panel team of voltage sag event",
+            "Contact facility electrical team — DO NOT perform PDU repairs onsite",
             "Log voltage readings every 15 minutes",
-            "If voltage < 420V, execute graceful shutdown procedure",
+            "If voltage < 420V, execute graceful shutdown (Manual §8.2)",
+            "Coordinate with UPS bypass if sustained sag > 30 minutes",
         ],
         "parts": [],
     },
     {
         "code": "KX-F2208-B",
-        "name": "Coolant Flow Sensor Fault",
+        "name": "Coolant Flow Sensor Fault — Calibration Drift",
         "severity": "LOW",
-        "avg_resolution_min": 20,
+        "avg_resolution_min": 22,
         "repair_actions": [
             "Verify sensor wiring harness connections at J-14 connector",
-            "Check sensor P-2208 calibration against flow meter reference",
-            "Replace sensor if calibration deviation > 5%",
+            "Check sensor P-2208 calibration against inline reference flow meter",
+            "Clean sensor ultrasonic transducer faces with isopropyl alcohol",
+            "Replace sensor P-2208 if calibration deviation > 5%",
         ],
         "parts": [
             {"part_number": "P-2208", "part_name": "Ultrasonic Flow Sensor", "quantity": 1},
@@ -116,13 +116,13 @@ FAULT_CATALOG = [
         "severity": "LOW",
         "avg_resolution_min": 35,
         "repair_actions": [
-            "Power cycle control board (hold RST for 5 seconds)",
-            "Check CAN bus termination resistors (120Ω at each end)",
-            "Update firmware if version < 3.2.0",
+            "Power cycle control board (hold RST button for 5 seconds)",
+            "Check CAN bus termination resistors (must be 120Ω at each network end)",
+            "Update firmware if version < 3.2.1 (see release notes)",
             "Replace control board P-CB-5501 if fault persists after firmware update",
         ],
         "parts": [
-            {"part_number": "P-CB-5501", "part_name": "Primary Control Board", "quantity": 1},
+            {"part_number": "P-CB-5501", "part_name": "Primary Control Board Assembly", "quantity": 1},
         ],
     },
 ]
@@ -133,35 +133,68 @@ TECHNICIANS = [
     {"id": "TECH-003", "name": "Lin Wei"},
     {"id": "TECH-004", "name": "David Petrov"},
     {"id": "TECH-005", "name": "Aisha Mohammed"},
+    {"id": "TECH-006", "name": "Carlos Rivera"},
 ]
 
 DEVICES = [
     {"device_id": "KCX-NYC-0042", "facility_id": "FAC-NYC-DC-01"},
     {"device_id": "KCX-NYC-0043", "facility_id": "FAC-NYC-DC-01"},
+    {"device_id": "KCX-NYC-0044", "facility_id": "FAC-NYC-DC-01"},
+    {"device_id": "KCX-NYC-0045", "facility_id": "FAC-NYC-DC-01"},
     {"device_id": "KCX-CHI-0011", "facility_id": "FAC-CHI-DC-02"},
     {"device_id": "KCX-CHI-0012", "facility_id": "FAC-CHI-DC-02"},
+    {"device_id": "KCX-CHI-0013", "facility_id": "FAC-CHI-DC-02"},
     {"device_id": "KCX-DFW-0008", "facility_id": "FAC-DFW-DC-03"},
+    {"device_id": "KCX-DFW-0009", "facility_id": "FAC-DFW-DC-03"},
+    {"device_id": "KCX-LAX-0001", "facility_id": "FAC-LAX-DC-04"},
+    {"device_id": "KCX-LAX-0002", "facility_id": "FAC-LAX-DC-04"},
+    {"device_id": "KCX-SEA-0001", "facility_id": "FAC-SEA-DC-05"},
 ]
 
+# Misdiagnosis records: index → (wrong_code, correct_code, note)
+MISDIAGNOSES = {
+    47: (
+        "KX-E4412-A",
+        "KX-V1103-A",
+        "Initial AI diagnosis suggested KX-E4412-A (voltage). Confirmed as KX-V1103-A (bearing) after manual inspection. Prompt v0.9 false positive — corrected in v1.0.",
+    ),
+    183: (
+        "KX-T2209-B",
+        "KX-P3301-C",
+        "AI flagged thermal signature consistent with seal failure. Root cause confirmed as strainer blockage — flow/temp ratio mismatch was key discriminator. Added to diagnostic training set.",
+    ),
+    361: (
+        "KX-F2208-B",
+        "KX-T2209-B",
+        "Erratic flow readings initially attributed to sensor drift. Actual cause was early-stage seal degradation. Prompt v1.1 update introduced flow/temperature correlation check to prevent recurrence.",
+    ),
+}
 
-def _random_past_datetime(days_back: int = 365) -> datetime:
+
+def _random_past_datetime(days_back: int = 730) -> datetime:
     offset = timedelta(days=random.uniform(0, days_back), hours=random.uniform(0, 24))
     return datetime.now(timezone.utc) - offset
 
 
-def generate_log_entry(index: int, force_misdiagnosis: bool = False) -> dict:
-    fault = random.choice(FAULT_CATALOG)
+def generate_log_entry(index: int) -> dict:
+    misdiag = MISDIAGNOSES.get(index)
+
+    if misdiag:
+        wrong_code, correct_code, note = misdiag
+        fault = next(f for f in FAULT_CATALOG if f["code"] == correct_code)
+        ai_match = False
+    else:
+        fault = random.choice(FAULT_CATALOG)
+        ai_match = True
+        note = ""
+
     device = random.choice(DEVICES)
     tech = random.choice(TECHNICIANS)
-    reported_at = _random_past_datetime(400)
+    reported_at = _random_past_datetime(730)
 
-    noise = random.gauss(1.0, 0.2)
+    noise = random.gauss(1.0, 0.18)
     resolution_minutes = max(10, int(fault["avg_resolution_min"] * noise))
     resolved_at = reported_at + timedelta(minutes=resolution_minutes)
-
-    ai_match = True
-    if force_misdiagnosis:
-        ai_match = False
 
     log_id_date = reported_at.strftime("%Y%m%d")
     log_id = f"LOG-{log_id_date}-{index:04d}"
@@ -188,20 +221,17 @@ def generate_log_entry(index: int, force_misdiagnosis: bool = False) -> dict:
         )[0],
         "root_cause_confirmed": fault["name"],
         "ai_diagnosis_match": ai_match,
-        "notes": "" if ai_match else "Initial AI diagnosis suggested KX-E4412-A (voltage). Confirmed as KX-V1103-A (bearing) after manual inspection. Prompt v0.9 false positive — corrected in v1.0.",
+        "notes": note,
     }
 
 
-def generate_all_records(count: int = 200) -> list[dict]:
-    records = []
-    for i in range(count):
-        force_misdiagnosis = (i == 47)
-        records.append(generate_log_entry(i + 1, force_misdiagnosis=force_misdiagnosis))
-    return records
+def generate_all_records(count: int = 500) -> list[dict]:
+    return [generate_log_entry(i + 1) for i in range(count)]
 
 
 def export_csv(records: list[dict], output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
+
     flat_records = []
     for r in records:
         flat = {k: v for k, v in r.items() if not isinstance(v, (list, dict))}
@@ -224,8 +254,8 @@ def export_csv(records: list[dict], output_dir: Path) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Seed maintenance log database")
-    parser.add_argument("--count", type=int, default=200)
+    parser = argparse.ArgumentParser(description="Seed 500 maintenance log records across 12 devices and 6 technicians")
+    parser.add_argument("--count", type=int, default=500)
     parser.add_argument("--export-csv", type=str, default="data/synthetic/logs/output")
     parser.add_argument("--db", type=str, default=None, help="SQLAlchemy DB URL (optional)")
     args = parser.parse_args()
@@ -237,10 +267,10 @@ def main():
         if not HAS_SQLALCHEMY:
             print("Install sqlalchemy to use --db: pip install sqlalchemy")
             return
-        print(f"DB export to {args.db} — implement with SQLAlchemy ORM models")
+        print(f"DB export to {args.db} — implement with SQLAlchemy ORM models as needed.")
 
-    print(f"\nGenerated {len(records)} maintenance log records.")
-    print(f"Note: Record LOG-*-0048 is the deliberate misdiagnosis for evaluation.")
+    print(f"\nGenerated {len(records)} records across {len(DEVICES)} devices and {len(TECHNICIANS)} technicians.")
+    print(f"Deliberate misdiagnoses: records {sorted(MISDIAGNOSES.keys())} (for evaluation harness).")
 
 
 if __name__ == "__main__":
