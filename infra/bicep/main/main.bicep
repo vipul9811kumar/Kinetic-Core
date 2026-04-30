@@ -20,6 +20,9 @@ param suffix string = uniqueString(resourceGroup().id)
 @description('Allowed CORS origin for the API')
 param allowedOrigin string = 'http://localhost:3000'
 
+@description('Region for CosmosDB — override when primary region has capacity issues')
+param cosmosLocation string = 'westus2'
+
 var prefix = 'kcore'
 var tags = {
   project: 'kinetic-core'
@@ -65,7 +68,7 @@ module cosmosDb '../modules/cosmos_db.bicep' = {
   name: 'cosmosDbDeploy'
   params: {
     accountName: '${prefix}-cosmos-${suffix}'
-    location: location
+    location: cosmosLocation
     tags: tags
     databaseName: 'kinetic-core'
   }

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "6237631635341998073"
+      "templateHash": "10502499271659165"
     }
   },
   "parameters": {
@@ -35,6 +35,13 @@
       "defaultValue": "http://localhost:3000",
       "metadata": {
         "description": "Allowed CORS origin for the API"
+      }
+    },
+    "cosmosLocation": {
+      "type": "string",
+      "defaultValue": "westus2",
+      "metadata": {
+        "description": "Region for CosmosDB — override when primary region has capacity issues"
       }
     }
   },
@@ -354,7 +361,7 @@
             "value": "[format('{0}-cosmos-{1}', variables('prefix'), parameters('suffix'))]"
           },
           "location": {
-            "value": "[parameters('location')]"
+            "value": "[parameters('cosmosLocation')]"
           },
           "tags": {
             "value": "[variables('tags')]"
