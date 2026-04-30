@@ -39,7 +39,6 @@ jobs:
           template: infra/bicep/main/main.bicep
           parameters: >
             environment=${{ github.event.inputs.environment || 'staging' }}
-            allowedOrigin=${{ secrets.ALLOWED_ORIGIN }}
 
   # ── Build and Push Knowledge Index ────────────────────────────────────────
   index-knowledge:

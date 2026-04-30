@@ -17,8 +17,6 @@ param location string = resourceGroup().location
 @description('Unique suffix to avoid naming conflicts')
 param suffix string = uniqueString(resourceGroup().id)
 
-@description('Allowed CORS origin for the API')
-param allowedOrigin string = 'http://localhost:3000'
 
 @description('Region for CosmosDB — override when primary region has capacity issues')
 param cosmosLocation string = 'westus2'
@@ -119,7 +117,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // ── Outputs ───────────────────────────────────────────────────────────────────
-output iotHubConnectionString string = iotHub.outputs.connectionString
+output iotHubHostName string = iotHub.outputs.hostName
 output cosmosEndpoint string = cosmosDb.outputs.endpoint
 output searchEndpoint string = aiSearch.outputs.endpoint
 output functionAppUrl string = ''

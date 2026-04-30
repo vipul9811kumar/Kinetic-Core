@@ -43,4 +43,4 @@ resource iotHub 'Microsoft.Devices/IotHubs@2023-06-30' = {
 
 output iotHubId string = iotHub.id
 output iotHubName string = iotHub.name
-output connectionString string = 'HostName=${iotHub.properties.hostName};SharedAccessKeyName=iothubowner;SharedAccessKey=${listKeys(iotHub.id, iotHub.apiVersion).value[0].primaryKey}'
+output hostName string = iotHub.properties.hostName
