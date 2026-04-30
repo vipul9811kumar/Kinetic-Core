@@ -23,8 +23,6 @@ param allowedOrigin string = 'http://localhost:3000'
 @description('Region for CosmosDB — override when primary region has capacity issues')
 param cosmosLocation string = 'westus2'
 
-@description('Region for Azure Functions — override when Consumption plan quota is unavailable')
-param functionLocation string = 'westus2'
 
 var prefix = 'kcore'
 var tags = {
@@ -88,24 +86,6 @@ module aiSearch '../modules/ai_search.bicep' = {
   }
 }
 
-// ── Azure Functions ───────────────────────────────────────────────────────────
-// Azure OpenAI endpoint is intentionally blank — agents/client.py falls back
-// to OPENAI_API_KEY automatically when AZURE_OPENAI_ENDPOINT is empty.
-// Wire this up once Azure OpenAI quota is approved for the subscription.
-module functionApp '../modules/function_app.bicep' = {
-  name: 'functionAppDeploy'
-  params: {
-    name: '${prefix}-func-${suffix}'
-    location: functionLocation
-    tags: tags
-    cosmosEndpoint: cosmosDb.outputs.endpoint
-    openAiEndpoint: ''
-    searchEndpoint: aiSearch.outputs.endpoint
-    allowedOrigin: allowedOrigin
-    keyVaultName: keyVault.outputs.name
-  }
-}
-
 // ── Azure Static Web Apps ─────────────────────────────────────────────────────
 module staticWebApp '../modules/static_web_app.bicep' = {
   name: 'staticWebAppDeploy'
@@ -142,6 +122,6 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 output iotHubConnectionString string = iotHub.outputs.connectionString
 output cosmosEndpoint string = cosmosDb.outputs.endpoint
 output searchEndpoint string = aiSearch.outputs.endpoint
-output functionAppUrl string = functionApp.outputs.url
+output functionAppUrl string = ''
 output instrumentationKey string = appInsights.properties.InstrumentationKey
 output swaHostname string = staticWebApp.outputs.hostname

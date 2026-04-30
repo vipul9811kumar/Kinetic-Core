@@ -75,10 +75,13 @@ jobs:
           AZURE_SEARCH_KEY: ${{ secrets.AZURE_SEARCH_KEY }}
 
   # ── Deploy Python Backend to Azure Functions ──────────────────────────────
+  # Skipped: subscription has zero App Service Plan quota (Dynamic/Basic/Standard all 0).
+  # Re-enable by requesting quota via Azure Portal → Subscriptions → Usage + Quotas.
   deploy-backend:
     name: Deploy Azure Functions
     runs-on: ubuntu-latest
     needs: [deploy-infra, index-knowledge]
+    if: false
     steps:
       - uses: actions/checkout@v4
 
