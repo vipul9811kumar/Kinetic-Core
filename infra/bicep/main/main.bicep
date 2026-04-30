@@ -23,6 +23,9 @@ param allowedOrigin string = 'http://localhost:3000'
 @description('Region for CosmosDB — override when primary region has capacity issues')
 param cosmosLocation string = 'westus2'
 
+@description('Region for Azure Functions — override when Consumption plan quota is unavailable')
+param functionLocation string = 'westus2'
+
 var prefix = 'kcore'
 var tags = {
   project: 'kinetic-core'
@@ -93,7 +96,7 @@ module functionApp '../modules/function_app.bicep' = {
   name: 'functionAppDeploy'
   params: {
     name: '${prefix}-func-${suffix}'
-    location: location
+    location: functionLocation
     tags: tags
     cosmosEndpoint: cosmosDb.outputs.endpoint
     openAiEndpoint: ''
