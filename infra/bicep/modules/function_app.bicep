@@ -19,7 +19,7 @@ resource hostingPlan 'Microsoft.Web/serverfarms@2023-01-01' = {
   name: '${name}-plan'
   location: location
   tags: tags
-  sku: { name: 'B1', tier: 'Basic' }
+  sku: { name: 'S1', tier: 'Standard' }
   properties: { reserved: true }
 }
 
