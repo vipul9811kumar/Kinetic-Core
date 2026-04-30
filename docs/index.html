@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -469,6 +470,23 @@
       flex-shrink: 0;
     }
 
+    .mermaid-wrap {
+      margin-top: 3rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      overflow-x: auto;
+    }
+    .mermaid-wrap .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+    .mermaid-wrap svg {
+      max-width: 100%;
+      height: auto;
+    }
+
     .arch-badges {
       display: flex;
       flex-wrap: wrap;
@@ -815,41 +833,47 @@
         under load — no infrastructure to manage.
       </p>
     </div>
-    <div class="arch-flow reveal">
-      <div class="arch-node">
-        <div class="node-icon">📡</div>
-        <div class="node-label">Devices</div>
-        <div class="node-name">IoT Hub</div>
-      </div>
-      <div class="arch-arrow">→</div>
-      <div class="arch-node">
-        <div class="node-icon">⚡</div>
-        <div class="node-label">Events</div>
-        <div class="node-name">Event Grid</div>
-      </div>
-      <div class="arch-arrow">→</div>
-      <div class="arch-node">
-        <div class="node-icon">🗄️</div>
-        <div class="node-label">Storage</div>
-        <div class="node-name">CosmosDB</div>
-      </div>
-      <div class="arch-arrow">→</div>
-      <div class="arch-node">
-        <div class="node-icon">🔍</div>
-        <div class="node-label">Knowledge</div>
-        <div class="node-name">AI Search</div>
-      </div>
-      <div class="arch-arrow">→</div>
-      <div class="arch-node">
-        <div class="node-icon">🧠</div>
-        <div class="node-label">Agents</div>
-        <div class="node-name">Container Apps</div>
-      </div>
-      <div class="arch-arrow">→</div>
-      <div class="arch-node">
-        <div class="node-icon">🖥️</div>
-        <div class="node-label">Dashboard</div>
-        <div class="node-name">Static Web Apps</div>
+    <div class="mermaid-wrap reveal">
+      <div class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': {'background': '#0c1628', 'primaryColor': '#1e3a5f', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#3b82f6', 'lineColor': '#64748b', 'secondaryColor': '#0f1e35', 'tertiaryColor': '#0c1628', 'edgeLabelBackground': '#0c1628', 'clusterBkg': '#0a1525', 'clusterBorder': '#1a3050', 'titleColor': '#e2e8f0', 'nodeTextColor': '#e2e8f0', 'fontFamily': 'Inter, sans-serif'}}}%%
+flowchart TB
+    subgraph Edge["🏭 Edge / Field"]
+        SENSORS["IoT Sensors\n(Generators · UPS · Transformers)"]
+    end
+
+    subgraph Ingestion["⚡ Ingestion Layer"]
+        HUB["Azure IoT Hub"]
+        EG["Event Grid"]
+    end
+
+    subgraph Intelligence["🧠 Intelligence Layer"]
+        CA["Container Apps\nAgent Pipeline"]
+        SEARCH["Azure AI Search\nManuals Index"]
+    end
+
+    subgraph Data["🗄️ Data Layer"]
+        COSMOS[("CosmosDB")]
+        KV["Key Vault"]
+    end
+
+    subgraph Presentation["🖥️ Presentation"]
+        SWA["Static Web Apps\nReact Dashboard"]
+    end
+
+    subgraph Observability["📊 Observability"]
+        LAW["Log Analytics"]
+        APPI["App Insights"]
+    end
+
+    SENSORS  -->|"telemetry"| HUB
+    HUB      -->|"device events"| EG
+    EG       -->|"incident trigger"| CA
+    CA      <-->|"read / write"| COSMOS
+    CA      <-->|"semantic search"| SEARCH
+    KV       -.->|"secrets"| CA
+    CA       -->|"REST API"| SWA
+    CA       -.->|"logs"| LAW
+    CA       -.->|"metrics"| APPI
       </div>
     </div>
     <div class="arch-badges reveal">
@@ -911,6 +935,8 @@
 </footer>
 
 <script>
+  mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });
+
   // Nav scroll shadow
   const nav = document.getElementById('navbar');
   window.addEventListener('scroll', () => {

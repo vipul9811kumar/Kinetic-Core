@@ -21,38 +21,45 @@ In critical infrastructure (data centers, hospitals, manufacturing plants), a po
 
 ## Architecture Overview
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                        KINETIC-CORE PLATFORM                       │
-│                                                                    │
-│  ┌──────────────┐    ┌──────────────┐    ┌───────────────────────┐ │
-│  │  IoT Layer   │    │  Data Layer  │    │    Knowledge Layer    │ │
-│  │              │    │              │    │                       │ │
-│  │ Azure IoT Hub│───▶│Azure Data    │    │  Azure AI Search      │ │
-│  │ Event Grid   │    │Factory +     │───▶│  (Vector + BM25)      │ │
-│  │ (Telemetry)  │    │Cosmos DB     │    │  PDF Manuals + SOPs   │ │
-│  └──────────────┘    └──────────────┘    └───────────────────────┘ │
-│          │                  │                       │               │
-│          ▼                  ▼                       ▼               │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │                   MULTI-AGENT CORE (Azure Functions)         │  │
-│  │                                                              │  │
-│  │  ┌─────────────────┐  ┌──────────────────┐  ┌────────────┐  │  │
-│  │  │ Diagnostic Lead │  │Tech. Librarian   │  │Safety      │  │  │
-│  │  │ (Anomaly + Root │─▶│(RAG: exact repair│─▶│Auditor     │  │  │
-│  │  │  Cause Analysis)│  │ steps from PDFs) │  │(Protocol   │  │  │
-│  │  └─────────────────┘  └──────────────────┘  │ Gate)      │  │  │
-│  │           ▲                                  └────────────┘  │  │
-│  │           │         Azure OpenAI GPT-4o                      │  │
-│  │           │         (Reasoning Engine)                       │  │
-│  └───────────┼──────────────────────────────────────────────────┘  │
-│              │                                                      │
-│  ┌──────────────────┐    ┌─────────────────────────────────────┐   │
-│  │ Azure AI Studio  │    │  React Dashboard (Real-time)        │   │
-│  │ Evaluations      │    │  Work Order Generation              │   │
-│  │ Drift Monitoring │    │  Agent Reasoning Trace              │   │
-│  └──────────────────┘    └─────────────────────────────────────┘   │
-└────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Edge["🏭 Edge / Field"]
+        SENSORS["IoT Sensors\n(Generators · UPS · Transformers)"]
+    end
+
+    subgraph Ingestion["⚡ Ingestion Layer"]
+        HUB["Azure IoT Hub"]
+        EG["Event Grid"]
+    end
+
+    subgraph Intelligence["🧠 Intelligence Layer"]
+        CA["Container Apps\nAgent Pipeline\n─────────────\nDiagnostic Agent\nLibrarian Agent\nPlanner Agent"]
+        SEARCH["Azure AI Search\nManuals Index\n(Vector + BM25)"]
+    end
+
+    subgraph Data["🗄️ Data Layer"]
+        COSMOS[("CosmosDB\nTelemetry · Incidents\nWork Orders · Memory")]
+        KV["Key Vault\nSecrets"]
+    end
+
+    subgraph Presentation["🖥️ Presentation"]
+        SWA["Static Web Apps\nReact Dashboard"]
+    end
+
+    subgraph Observability["📊 Observability"]
+        LAW["Log Analytics"]
+        APPI["App Insights"]
+    end
+
+    SENSORS  -->|"MQTT / AMQP telemetry"| HUB
+    HUB      -->|"device events"| EG
+    EG       -->|"incident trigger"| CA
+    CA      <-->|"read / write"| COSMOS
+    CA      <-->|"semantic search"| SEARCH
+    KV       -.->|"secrets at runtime"| CA
+    CA       -->|"REST API"| SWA
+    CA       -.->|"logs + traces"| LAW
+    CA       -.->|"metrics"| APPI
 ```
 
 ---
