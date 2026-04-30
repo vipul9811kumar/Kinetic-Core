@@ -84,6 +84,16 @@ module aiSearch '../modules/ai_search.bicep' = {
   }
 }
 
+// ── Container Registry ────────────────────────────────────────────────────────
+module containerRegistry '../modules/container_registry.bicep' = {
+  name: 'containerRegistryDeploy'
+  params: {
+    name: 'kcorecr${suffix}'
+    location: location
+    tags: tags
+  }
+}
+
 // ── Azure Static Web Apps ─────────────────────────────────────────────────────
 module staticWebApp '../modules/static_web_app.bicep' = {
   name: 'staticWebAppDeploy'
@@ -91,6 +101,17 @@ module staticWebApp '../modules/static_web_app.bicep' = {
     name: '${prefix}-swa-${suffix}'
     tags: tags
     skuName: environment == 'prod' ? 'Standard' : 'Free'
+  }
+}
+
+// ── Azure Container Apps ──────────────────────────────────────────────────────
+module containerApp '../modules/container_app.bicep' = {
+  name: 'containerAppDeploy'
+  params: {
+    name: '${prefix}-app-${suffix}'
+    location: location
+    tags: tags
+    lawName: logAnalytics.name
   }
 }
 
@@ -120,6 +141,9 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 output iotHubHostName string = iotHub.outputs.hostName
 output cosmosEndpoint string = cosmosDb.outputs.endpoint
 output searchEndpoint string = aiSearch.outputs.endpoint
-output functionAppUrl string = ''
+output containerAppUrl string = containerApp.outputs.url
+output containerAppName string = containerApp.outputs.name
+output acrLoginServer string = containerRegistry.outputs.loginServer
+output acrName string = containerRegistry.outputs.name
 output instrumentationKey string = appInsights.properties.InstrumentationKey
 output swaHostname string = staticWebApp.outputs.hostname

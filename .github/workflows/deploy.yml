@@ -21,7 +21,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'staging' }}
     outputs:
-      function_url: ${{ steps.bicep.outputs.functionAppUrl }}
+      container_app_url: ${{ steps.bicep.outputs.containerAppUrl }}
+      container_app_name: ${{ steps.bicep.outputs.containerAppName }}
+      acr_login_server: ${{ steps.bicep.outputs.acrLoginServer }}
+      acr_name: ${{ steps.bicep.outputs.acrName }}
+      cosmos_endpoint: ${{ steps.bicep.outputs.cosmosEndpoint }}
+      search_endpoint: ${{ steps.bicep.outputs.searchEndpoint }}
       swa_hostname: ${{ steps.bicep.outputs.swaHostname }}
     steps:
       - uses: actions/checkout@v4
@@ -74,34 +79,64 @@ jobs:
           AZURE_SEARCH_ENDPOINT: ${{ secrets.AZURE_SEARCH_ENDPOINT }}
           AZURE_SEARCH_KEY: ${{ secrets.AZURE_SEARCH_KEY }}
 
-  # ── Deploy Python Backend to Azure Functions ──────────────────────────────
-  # Skipped: subscription has zero App Service Plan quota (Dynamic/Basic/Standard all 0).
-  # Re-enable by requesting quota via Azure Portal → Subscriptions → Usage + Quotas.
+  # ── Build and Deploy Backend to Container Apps ────────────────────────────
   deploy-backend:
-    name: Deploy Azure Functions
+    name: Deploy to Container Apps
     runs-on: ubuntu-latest
-    needs: [deploy-infra, index-knowledge]
-    if: false
+    needs: deploy-infra
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
 
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Functions
-        uses: azure/functions-action@v1
-        with:
-          app-name: ${{ secrets.FUNCTION_APP_NAME }}
-          package: .
-          scm-do-build-during-deployment: true
-          enable-oryx-build: true
+      - name: Build and push Docker image
+        env:
+          ACR_NAME: ${{ needs.deploy-infra.outputs.acr_name }}
+          ACR_SERVER: ${{ needs.deploy-infra.outputs.acr_login_server }}
+        run: |
+          az acr login --name "$ACR_NAME"
+          IMAGE="$ACR_SERVER/kinetic-core-api:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+      - name: Configure registry and deploy
+        env:
+          APP_NAME: ${{ needs.deploy-infra.outputs.container_app_name }}
+          RG: ${{ secrets.AZURE_RG }}
+          ACR_SERVER: ${{ needs.deploy-infra.outputs.acr_login_server }}
+          ACR_NAME: ${{ needs.deploy-infra.outputs.acr_name }}
+          COSMOS_ENDPOINT: ${{ needs.deploy-infra.outputs.cosmos_endpoint }}
+          SEARCH_ENDPOINT: ${{ needs.deploy-infra.outputs.search_endpoint }}
+          SWA_HOSTNAME: ${{ needs.deploy-infra.outputs.swa_hostname }}
+        run: |
+          ACR_USER=$(az acr credential show --name "$ACR_NAME" --query username -o tsv)
+          ACR_PASS=$(az acr credential show --name "$ACR_NAME" --query "passwords[0].value" -o tsv)
+
+          az containerapp registry set \
+            --name "$APP_NAME" --resource-group "$RG" \
+            --server "$ACR_SERVER" --username "$ACR_USER" --password "$ACR_PASS"
+
+          az containerapp secret set \
+            --name "$APP_NAME" --resource-group "$RG" \
+            --secrets \
+              "cosmos-key=${{ secrets.COSMOS_KEY }}" \
+              "search-key=${{ secrets.AZURE_SEARCH_KEY }}" \
+              "openai-key=${{ secrets.OPENAI_API_KEY }}"
+
+          az containerapp update \
+            --name "$APP_NAME" --resource-group "$RG" \
+            --image "$IMAGE" \
+            --set-env-vars \
+              "COSMOS_ENDPOINT=$COSMOS_ENDPOINT" \
+              "AZURE_SEARCH_ENDPOINT=$SEARCH_ENDPOINT" \
+              "ALLOWED_ORIGINS=https://$SWA_HOSTNAME" \
+              "COSMOS_KEY=secretref:cosmos-key" \
+              "AZURE_SEARCH_KEY=secretref:search-key" \
+              "OPENAI_API_KEY=secretref:openai-key"
 
   # ── Deploy Frontend to Azure Static Web Apps ───────────────────────────────
   deploy-frontend:
@@ -126,7 +161,7 @@ jobs:
           npm ci
           npm run build
         env:
-          VITE_API_URL: ${{ needs.deploy-infra.outputs.function_url }}
+          VITE_API_URL: ${{ needs.deploy-infra.outputs.container_app_url }}
 
       - name: Deploy to Static Web Apps
         uses: azure/static-web-apps-deploy@v1
