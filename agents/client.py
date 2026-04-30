@@ -14,6 +14,8 @@ from openai import AsyncAzureOpenAI, AsyncOpenAI
 
 def make_openai_client() -> AsyncAzureOpenAI | AsyncOpenAI:
     azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "").strip()
+    if azure_endpoint and not azure_endpoint.startswith(("https://", "http://")):
+        azure_endpoint = ""  # invalid — treat as unset, fall through to direct OpenAI
 
     if azure_endpoint:
         return AsyncAzureOpenAI(
