@@ -26,6 +26,9 @@ param openAiAdaDeployment string = 'text-embedding-ada-002'
 @description('Allowed CORS origin for the API')
 param allowedOrigin string = 'http://localhost:3000'
 
+@description('Deploy Azure OpenAI resource (requires quota — set false to use OPENAI_API_KEY fallback)')
+param deployAzureOpenAi bool = false
+
 var prefix = 'kcore'
 var tags = {
   project: 'kinetic-core'
@@ -77,8 +80,8 @@ module cosmosDb '../modules/cosmos_db.bicep' = {
   }
 }
 
-// ── Azure OpenAI ──────────────────────────────────────────────────────────────
-module openAi '../modules/openai.bicep' = {
+// ── Azure OpenAI (conditional — skipped when quota unavailable) ───────────────
+module openAi '../modules/openai.bicep' = if (deployAzureOpenAi) {
   name: 'openAiDeploy'
   params: {
     name: '${prefix}-aoai-${suffix}'
@@ -88,6 +91,8 @@ module openAi '../modules/openai.bicep' = {
     adaDeploymentName: openAiAdaDeployment
   }
 }
+
+var openAiEndpoint = deployAzureOpenAi ? openAi.outputs.endpoint : ''
 
 // ── Azure AI Search ───────────────────────────────────────────────────────────
 module aiSearch '../modules/ai_search.bicep' = {
@@ -108,12 +113,12 @@ module functionApp '../modules/function_app.bicep' = {
     location: location
     tags: tags
     cosmosEndpoint: cosmosDb.outputs.endpoint
-    openAiEndpoint: openAi.outputs.endpoint
+    openAiEndpoint: openAiEndpoint
     searchEndpoint: aiSearch.outputs.endpoint
     allowedOrigin: allowedOrigin
     keyVaultName: keyVault.outputs.name
   }
-  dependsOn: [cosmosDb, openAi, aiSearch, keyVault]
+  dependsOn: [cosmosDb, aiSearch, keyVault]
 }
 
 // ── Azure Static Web Apps ─────────────────────────────────────────────────────
@@ -151,7 +156,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 // ── Outputs ───────────────────────────────────────────────────────────────────
 output iotHubConnectionString string = iotHub.outputs.connectionString
 output cosmosEndpoint string = cosmosDb.outputs.endpoint
-output openAiEndpoint string = openAi.outputs.endpoint
+output openAiEndpoint string = openAiEndpoint
 output searchEndpoint string = aiSearch.outputs.endpoint
 output functionAppUrl string = functionApp.outputs.url
 output instrumentationKey string = appInsights.properties.InstrumentationKey
