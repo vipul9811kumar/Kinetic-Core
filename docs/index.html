@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kinetic Core — Autonomous Reliability for Critical Power</title>
+  <meta name="description" content="AI-powered autonomous reliability engineering for critical power systems. Detect faults, diagnose root causes, and generate repair work orders before downtime strikes." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #070d1a;
+      --bg-card:   #0c1628;
+      --bg-card2:  #0f1e35;
+      --border:    #1a3050;
+      --amber:     #f59e0b;
+      --amber-dim: #d97706;
+      --blue:      #3b82f6;
+      --blue-dim:  #1d4ed8;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --subtle:    #94a3b8;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 64px;
+      background: rgba(7, 13, 26, 0.8);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.3s;
+    }
+    nav.scrolled { border-color: var(--border); }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .nav-logo .bolt {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--amber), #ef4444);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--subtle);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-demo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-amber {
+      background: var(--amber);
+      color: #0a0a0a;
+    }
+    .btn-amber:hover {
+      background: #fbbf24;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(245,158,11,0.4);
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--subtle);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { color: var(--text); border-color: var(--subtle); }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 2rem 80px;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(245,158,11,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(59,130,246,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 30% at 10% 60%, rgba(245,158,11,0.06) 0%, transparent 50%);
+    }
+
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(26,48,80,0.3) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(26,48,80,0.3) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 0%, transparent 100%);
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 1rem;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--amber);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1.75rem;
+      animation: fadeUp 0.6s ease both;
+    }
+    .hero-badge .dot {
+      width: 6px; height: 6px;
+      background: var(--amber);
+      border-radius: 50%;
+      animation: pulse 2s ease infinite;
+    }
+
+    .hero-content { position: relative; max-width: 860px; }
+
+    h1 {
+      font-size: clamp(2.4rem, 6vw, 4.2rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.6s ease 0.1s both;
+    }
+    h1 .accent { color: var(--amber); }
+
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: var(--subtle);
+      max-width: 600px;
+      margin: 0 auto 2.5rem;
+      font-weight: 400;
+      animation: fadeUp 0.6s ease 0.2s both;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      animation: fadeUp 0.6s ease 0.3s both;
+    }
+    .btn-lg { padding: 0.75rem 1.75rem; font-size: 0.95rem; border-radius: 10px; }
+
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      margin-top: 5rem;
+      padding-top: 3rem;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+      animation: fadeUp 0.6s ease 0.4s both;
+    }
+    .stat-item { text-align: center; }
+    .stat-val {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .stat-val span { color: var(--amber); }
+    .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; font-weight: 500; }
+
+    /* ── Section layout ── */
+    section { padding: 6rem 2rem; }
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--amber);
+      margin-bottom: 1rem;
+    }
+    .section-label::before {
+      content: '';
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: var(--amber);
+    }
+
+    h2 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+    .section-sub {
+      font-size: 1.05rem;
+      color: var(--subtle);
+      max-width: 540px;
+    }
+
+    /* ── Problem ── */
+    #about { background: linear-gradient(180deg, var(--bg) 0%, #080f1e 100%); }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+      margin-top: 4rem;
+    }
+
+    .problem-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+
+    .pstat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: border-color 0.3s;
+    }
+    .pstat-card:hover { border-color: rgba(245,158,11,0.4); }
+    .pstat-num {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--amber);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .pstat-desc { font-size: 0.82rem; color: var(--muted); margin-top: 0.4rem; line-height: 1.4; }
+
+    .problem-text h2 { margin-bottom: 1.25rem; }
+    .problem-text p { color: var(--subtle); margin-bottom: 1rem; font-size: 0.97rem; }
+
+    .check-list { list-style: none; margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .check-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--subtle);
+    }
+    .check-list li::before {
+      content: '✓';
+      color: var(--amber);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 0.05rem;
+    }
+
+    /* ── How It Works ── */
+    #how-it-works { background: #080f1e; }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      margin-top: 4rem;
+      position: relative;
+    }
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 36px;
+      left: calc(12.5% + 16px);
+      right: calc(12.5% + 16px);
+      height: 2px;
+      background: linear-gradient(90deg, var(--amber), var(--blue), var(--amber), var(--blue));
+      background-size: 200% 100%;
+      animation: shimmer 3s linear infinite;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0 1rem;
+    }
+    .step-num {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--bg-card);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      z-index: 1;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .step:hover .step-num {
+      border-color: var(--amber);
+      box-shadow: 0 0 20px rgba(245,158,11,0.3);
+    }
+    .step-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .step-desc { font-size: 0.83rem; color: var(--muted); line-height: 1.5; }
+    .step-tag {
+      display: inline-block;
+      margin-top: 0.75rem;
+      padding: 0.2rem 0.6rem;
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.25);
+      border-radius: 100px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #60a5fa;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Features ── */
+    #features { background: var(--bg); }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      margin-top: 4rem;
+    }
+
+    .feat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.75rem;
+      transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .feat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--amber), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .feat-card:hover {
+      border-color: rgba(245,158,11,0.35);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    }
+    .feat-card:hover::before { opacity: 1; }
+
+    .feat-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      margin-bottom: 1.25rem;
+      background: rgba(245,158,11,0.12);
+      border: 1px solid rgba(245,158,11,0.2);
+    }
+    .feat-title { font-size: 0.97rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feat-desc { font-size: 0.83rem; color: var(--muted); line-height: 1.55; }
+
+    /* ── Architecture ── */
+    #architecture { background: #080f1e; }
+
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-top: 4rem;
+      flex-wrap: wrap;
+    }
+
+    .arch-node {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      min-width: 120px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .arch-node:hover {
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 0 24px rgba(59,130,246,0.15);
+    }
+    .arch-node .node-icon { font-size: 1.75rem; margin-bottom: 0.4rem; }
+    .arch-node .node-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .arch-node .node-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 0.15rem;
+    }
+
+    .arch-arrow {
+      color: var(--muted);
+      font-size: 1.2rem;
+      padding: 0 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .arch-badges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-top: 2.5rem;
+    }
+    .tech-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.85rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--subtle);
+    }
+    .tech-badge .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--blue);
+      flex-shrink: 0;
+    }
+    .tech-badge .dot.amber { background: var(--amber); }
+    .tech-badge .dot.green { background: #22c55e; }
+
+    /* ── CTA ── */
+    #cta {
+      background: var(--bg);
+      text-align: center;
+    }
+    .cta-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4rem 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(245,158,11,0.08), transparent);
+    }
+    .cta-box > * { position: relative; }
+    .cta-box h2 { margin-bottom: 1rem; }
+    .cta-box p { color: var(--subtle); margin-bottom: 2rem; }
+    .cta-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+    /* ── Footer ── */
+    footer {
+      background: #04080f;
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+    }
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+    }
+    .footer-links a {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text); }
+    .footer-copy { font-size: 0.78rem; color: var(--muted); }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+    @keyframes shimmer {
+      0%   { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .problem-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+      .steps { grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+      .steps::before { display: none; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .arch-flow { gap: 0.5rem; }
+    }
+    @media (max-width: 600px) {
+      .nav-links { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; }
+      .hero-stats { gap: 2rem; }
+      .problem-stats { grid-template-columns: 1fr; }
+      .arch-node { min-width: 90px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ─────────────────────────────────────────────────────────────────── -->
+<nav id="navbar">
+  <a href="#" class="nav-logo">
+    <div class="bolt">⚡</div>
+    Kinetic Core
+  </a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#how-it-works">How It Works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+  </ul>
+  <div class="nav-demo">
+    <a href="https://github.com/vipul9811kumar/Kinetic-Core" target="_blank" class="btn btn-outline">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+      GitHub
+    </a>
+    <a href="https://blue-field-091cdcd10.7.azurestaticapps.net" target="_blank" class="btn btn-amber">
+      Live Demo →
+    </a>
+  </div>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
+<section class="hero" id="home">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-badge">
+      <div class="dot"></div>
+      Now Live — Full Stack Deployed on Azure
+    </div>
+    <h1>
+      The Autonomous<br />
+      Reliability Engineer for<br />
+      <span class="accent">Critical Power Systems</span>
+    </h1>
+    <p class="hero-sub">
+      AI agents that detect equipment faults, diagnose root causes from manuals,
+      and generate repair work orders — before downtime strikes.
+    </p>
+    <div class="hero-ctas">
+      <a href="https://blue-field-091cdcd10.7.azurestaticapps.net" target="_blank" class="btn btn-amber btn-lg">
+        ⚡ View Live Demo
+      </a>
+      <a href="https://github.com/vipul9811kumar/Kinetic-Core" target="_blank" class="btn btn-outline btn-lg">
+        View on GitHub
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item">
+        <div class="stat-val">$9<span>k</span></div>
+        <div class="stat-label">Cost per minute of downtime</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">&lt;2<span>min</span></div>
+        <div class="stat-label">Fault detection time</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">3<span>x</span></div>
+        <div class="stat-label">AI agents in the pipeline</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">0<span>hr</span></div>
+        <div class="stat-label">Manual triage required</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Problem ───────────────────────────────────────────────────────────────── -->
+<section id="about">
+  <div class="container">
+    <div class="problem-grid">
+      <div class="problem-stats reveal">
+        <div class="pstat-card">
+          <div class="pstat-num">43%</div>
+          <div class="pstat-desc">of all unplanned downtime is caused by equipment failure</div>
+        </div>
+        <div class="pstat-card">
+          <div class="pstat-num">14h</div>
+          <div class="pstat-desc">average time to manually diagnose a complex fault</div>
+        </div>
+        <div class="pstat-card">
+          <div class="pstat-num">$2.4M</div>
+          <div class="pstat-desc">average annual cost of downtime for a mid-size facility</div>
+        </div>
+        <div class="pstat-card">
+          <div class="pstat-num">91%</div>
+          <div class="pstat-desc">agent diagnostic accuracy on held-out incident test set</div>
+        </div>
+      </div>
+      <div class="problem-text reveal reveal-delay-2">
+        <div class="section-label">The Problem</div>
+        <h2>Critical infrastructure breaks. Engineers scramble.</h2>
+        <p>
+          Power systems in data centers, hospitals, and industrial facilities operate
+          around the clock. When a generator, UPS, or transformer fails, every
+          minute of downtime carries massive financial and safety consequences.
+        </p>
+        <p>
+          Traditional maintenance is reactive. Engineers manually dig through logs,
+          manuals, and tribal knowledge — often under pressure — to diagnose faults
+          that an AI could identify in seconds.
+        </p>
+        <ul class="check-list">
+          <li>Telemetry streamed from IoT sensors in real time</li>
+          <li>Anomalies flagged before they escalate to failures</li>
+          <li>Root causes grounded in actual equipment manuals</li>
+          <li>Work orders generated with parts lists and safety flags</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How It Works ──────────────────────────────────────────────────────────── -->
+<section id="how-it-works">
+  <div class="container">
+    <div class="reveal" style="text-align:center; margin-bottom: 0;">
+      <div class="section-label" style="justify-content:center;">The Pipeline</div>
+      <h2>From raw telemetry to repair order<br />in under two minutes</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-num">📡</div>
+        <div class="step-title">Ingest</div>
+        <div class="step-desc">IoT sensors stream voltage, current, temperature and load to Azure IoT Hub</div>
+        <span class="step-tag">IoT Hub</span>
+      </div>
+      <div class="step reveal reveal-delay-1">
+        <div class="step-num">🔍</div>
+        <div class="step-title">Detect</div>
+        <div class="step-desc">Real-time anomaly detection compares readings against learned baselines</div>
+        <span class="step-tag">Event Grid</span>
+      </div>
+      <div class="step reveal reveal-delay-2">
+        <div class="step-num">🧠</div>
+        <div class="step-title">Diagnose</div>
+        <div class="step-desc">Three AI agents — Diagnostic, Librarian, Planner — reason over data and manuals</div>
+        <span class="step-tag">GPT-4 + Search</span>
+      </div>
+      <div class="step reveal reveal-delay-3">
+        <div class="step-num">📋</div>
+        <div class="step-title">Act</div>
+        <div class="step-desc">Structured work order with parts list, repair steps, and safety flags</div>
+        <span class="step-tag">CosmosDB</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ──────────────────────────────────────────────────────────────── -->
+<section id="features">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Capabilities</div>
+      <h2>Built for reliability engineers,<br />not data scientists</h2>
+      <p class="section-sub">
+        Every feature is designed around the actual workflow of a facility
+        engineer managing critical power assets.
+      </p>
+    </div>
+    <div class="features-grid">
+      <div class="feat-card reveal">
+        <div class="feat-icon">⚡</div>
+        <div class="feat-title">Autonomous Fault Diagnosis</div>
+        <div class="feat-desc">Multi-agent pipeline reasons over sensor history, equipment specs, and past incidents to deliver a ranked differential diagnosis.</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-1">
+        <div class="feat-icon">📚</div>
+        <div class="feat-title">Knowledge-Grounded Repairs</div>
+        <div class="feat-desc">Semantic search over indexed equipment manuals returns repair procedures with exact citations — no hallucinated steps.</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-2">
+        <div class="feat-icon">📈</div>
+        <div class="feat-title">Real-Time Telemetry</div>
+        <div class="feat-desc">Sub-second ingestion from IoT devices with configurable alert thresholds and trend visualisation across all assets.</div>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon">🔧</div>
+        <div class="feat-title">Work Order Generation</div>
+        <div class="feat-desc">Structured work orders include parts list, estimated labour time, safety-critical flags, and PDF export for field engineers.</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-1">
+        <div class="feat-icon">🔒</div>
+        <div class="feat-title">Full Audit Trail</div>
+        <div class="feat-desc">Every agent decision is logged with its reasoning chain and evidence sources — full traceability for compliance and post-incident review.</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-2">
+        <div class="feat-icon">📊</div>
+        <div class="feat-title">Drift Detection</div>
+        <div class="feat-desc">Weekly automated baseline comparison catches model degradation before it affects diagnostic accuracy, with Slack alerts on threshold breach.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Architecture ───────────────────────────────────────────────────────────── -->
+<section id="architecture">
+  <div class="container">
+    <div class="reveal" style="text-align:center;">
+      <div class="section-label" style="justify-content:center;">Architecture</div>
+      <h2>Fully serverless on Azure</h2>
+      <p class="section-sub" style="margin: 0 auto;">
+        Every component scales to zero when idle and scales out automatically
+        under load — no infrastructure to manage.
+      </p>
+    </div>
+    <div class="arch-flow reveal">
+      <div class="arch-node">
+        <div class="node-icon">📡</div>
+        <div class="node-label">Devices</div>
+        <div class="node-name">IoT Hub</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">
+        <div class="node-icon">⚡</div>
+        <div class="node-label">Events</div>
+        <div class="node-name">Event Grid</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">
+        <div class="node-icon">🗄️</div>
+        <div class="node-label">Storage</div>
+        <div class="node-name">CosmosDB</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">
+        <div class="node-icon">🔍</div>
+        <div class="node-label">Knowledge</div>
+        <div class="node-name">AI Search</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">
+        <div class="node-icon">🧠</div>
+        <div class="node-label">Agents</div>
+        <div class="node-name">Container Apps</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">
+        <div class="node-icon">🖥️</div>
+        <div class="node-label">Dashboard</div>
+        <div class="node-name">Static Web Apps</div>
+      </div>
+    </div>
+    <div class="arch-badges reveal">
+      <span class="tech-badge"><span class="dot amber"></span>Python 3.11</span>
+      <span class="tech-badge"><span class="dot amber"></span>FastAPI</span>
+      <span class="tech-badge"><span class="dot amber"></span>React 18</span>
+      <span class="tech-badge"><span class="dot amber"></span>TypeScript</span>
+      <span class="tech-badge"><span class="dot"></span>Azure IoT Hub</span>
+      <span class="tech-badge"><span class="dot"></span>Azure CosmosDB</span>
+      <span class="tech-badge"><span class="dot"></span>Azure AI Search</span>
+      <span class="tech-badge"><span class="dot"></span>Azure Container Apps</span>
+      <span class="tech-badge"><span class="dot"></span>Azure Static Web Apps</span>
+      <span class="tech-badge"><span class="dot green"></span>OpenAI GPT-4</span>
+      <span class="tech-badge"><span class="dot green"></span>Ada-002 Embeddings</span>
+      <span class="tech-badge"><span class="dot"></span>Bicep IaC</span>
+      <span class="tech-badge"><span class="dot"></span>GitHub Actions</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ───────────────────────────────────────────────────────────────────── -->
+<section id="cta">
+  <div class="container">
+    <div class="cta-box reveal">
+      <div class="section-label" style="justify-content:center; margin-bottom:1.5rem;">Ready to explore?</div>
+      <h2>See it working live</h2>
+      <p>
+        The full pipeline is deployed and running. Explore the dashboard,
+        trigger agent runs, and inspect real-time telemetry.
+      </p>
+      <div class="cta-btns">
+        <a href="https://blue-field-091cdcd10.7.azurestaticapps.net" target="_blank" class="btn btn-amber btn-lg">
+          ⚡ Open Live Demo
+        </a>
+        <a href="https://github.com/vipul9811kumar/Kinetic-Core" target="_blank" class="btn btn-outline btn-lg">
+          View Source Code
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ────────────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <a href="#" class="footer-brand">
+      <div class="bolt" style="width:22px;height:22px;font-size:11px;border-radius:5px;background:linear-gradient(135deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;">⚡</div>
+      Kinetic Core
+    </a>
+    <ul class="footer-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="https://blue-field-091cdcd10.7.azurestaticapps.net" target="_blank">Live Demo</a></li>
+      <li><a href="https://github.com/vipul9811kumar/Kinetic-Core" target="_blank">GitHub</a></li>
+    </ul>
+    <div class="footer-copy">Built with Azure &amp; OpenAI</div>
+  </div>
+</footer>
+
+<script>
+  // Nav scroll shadow
+  const nav = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+  });
+
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
