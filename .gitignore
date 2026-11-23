@@ -45,6 +45,9 @@ knowledge/embedder/output/
 monitoring/drift/reports/
 monitoring/evaluation/reports/
 
+# Quantum-readiness run outputs may contain private evidence and review data
+/qr-pilot/run-*/
+
 # IDE
 .vscode/settings.json
 .vscode/*.code-workspace
